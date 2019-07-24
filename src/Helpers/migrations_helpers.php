@@ -89,7 +89,7 @@ if (!function_exists('createDefaultRevisionsTableFields')) {
 
         $table->increments('id');
         $table->timestamps();
-        $table->json('payload');
+        $table->mediumText('payload');
         $table->integer("{$tableNameSingular}_id")->unsigned()->index();
         $table->integer('user_id')->unsigned()->nullable();
         $table->foreign("{$tableNameSingular}_id")->references('id')->on("{$tableNamePlural}")->onDelete('cascade');
