@@ -149,9 +149,11 @@ trait HasMedias
         }
 
         if ($media) {
-            $metadatas = (object) json_decode($media->pivot->metadatas);
-            $language = app()->getLocale();
-            return $metadatas->video->$language ?? (is_object($metadatas->video) ? '' : ($metadatas->video ?? ''));
+            if ($media->pivot->metadatas != '[]') {
+                $metadatas = (object) json_decode($media->pivot->metadatas);
+                $language = app()->getLocale();
+                return $metadatas->video->$language ?? (is_object($metadatas->video) ? '' : ($metadatas->video ?? ''));
+            }
         }
 
         return '';
