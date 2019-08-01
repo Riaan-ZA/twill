@@ -7,7 +7,7 @@
         </a>
         <span v-else>{{ customTitle ? customTitle : title }}</span>
       </h2>
-      <a v-if="permalink" :href="fullUrl" target="_blank" class="titleEditor__permalink f--small">
+      <a v-if="permalink" :href="visibleUrl | prettierUrl" target="_blank" class="titleEditor__permalink f--small">
         <span class="f--note f--external f--underlined--o">{{ visibleUrl | prettierUrl }}</span>
       </a>
 

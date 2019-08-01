@@ -30,6 +30,13 @@ trait HasSlug
         );
     }
 
+    public function activeslug()
+    {
+        return $this->hasMany(
+            config('twill.namespace') . "\Models\Slugs\\" . $this->getSlugClassName()
+        )->where('active', true);
+    }
+
     public function getSlugClass()
     {
         $slugClassName = config('twill.namespace') . "\Models\Slugs\\" . $this->getSlugClassName();
