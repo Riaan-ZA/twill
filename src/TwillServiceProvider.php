@@ -141,7 +141,7 @@ class TwillServiceProvider extends ServiceProvider
             ]]);
 
             config(['mail.markdown.paths' => array_merge(
-                [__DIR__ . '/../views/emails'],
+                ['/vendor/area17/twill/views/emails'],
                 config('mail.markdown.paths')
             )]);
         }
