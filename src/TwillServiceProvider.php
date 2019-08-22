@@ -173,14 +173,6 @@ class TwillServiceProvider extends ServiceProvider
                 'table' => config('twill.password_resets_table', 'twill_password_resets'),
                 'expire' => 60,
             ]]);
-<<<<<<< HEAD
-
-            config(['mail.markdown.paths' => array_merge(
-                ['/vendor/area17/twill/views/emails'],
-                config('mail.markdown.paths')
-            )]);
-=======
->>>>>>> 97cb4785980d5826ac3dce1f1b986228bb3d8c9b
         }
 
         config(['activitylog.enabled' => config('twill.enabled.dashboard') ? true : config('twill.enabled.activitylog')]);
