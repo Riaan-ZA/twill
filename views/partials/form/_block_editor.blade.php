@@ -1,16 +1,30 @@
+@php
+    $label = $label ?? 'Add content'
+@endphp
+
 @unless ($withoutSeparator ?? false)
     <hr/>
 @endif
-<a17-content title="Add content"></a17-content>
+<a17-content title="{{ $label }}"></a17-content>
 
 @php
-    $availableBlocks = isset($blocks) ? collect($blocks)->map(function ($block) {
-        return config('twill.block_editor.blocks.' . $block);
-    })->filter()->toArray() : config('twill.block_editor.blocks');
+    if (isset($blocks)) {
+        $allowedBlocks = collect($blocks)->mapWithKeys(function ($block) {
+            return [$block => config('twill.block_editor.blocks.' . $block)];
+        })->filter()->toArray();
+    } elseif (isset($group)) {
+        $blocks = config('twill.block_editor.blocks');
+
+        $allowedBlocks = array_filter($blocks, function ($block) use ($group) {
+            return isset($block['group']) && $block['group'] === $group;
+        });
+    } else {
+        $allowedBlocks = config('twill.block_editor.blocks');
+    }
 @endphp
 
 @push('vuexStore')
-    window.STORE.form.content = {!! json_encode(array_values($availableBlocks)) !!}
+    window.STORE.form.content = {!! json_encode(array_values($allowedBlocks)) !!}
     window.STORE.form.blocks = {!! json_encode($form_fields['blocks'] ?? []) !!}
 
     @foreach($form_fields['blocksFields'] ?? [] as $field)

@@ -2,29 +2,39 @@
 
 namespace A17\Twill;
 
+use A17\Twill\Http\Controllers\Front\GlideController;
 use A17\Twill\Http\Middleware\Impersonate;
-use A17\Twill\Http\Middleware\NoDebugBar;
 use A17\Twill\Http\Middleware\RedirectIfAuthenticated;
 use A17\Twill\Http\Middleware\ValidateBackHistory;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Arr;
-use Route;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
 {
     protected $namespace = 'A17\Twill\Http\Controllers';
 
+    /**
+     * Bootstraps the package services.
+     *
+     * @return void
+     */
     public function boot()
     {
-        $this->registerRouteMiddlewares();
+        $this->registerRouteMiddlewares($this->app->get('router'));
         $this->registerMacros();
         parent::boot();
     }
 
+    /**
+     * @param Router $router
+     * @return void
+     */
     public function map(Router $router)
     {
-        if (($patterns=config('twill.admin_route_patterns')) != null) {
+        if (($patterns = config('twill.admin_route_patterns')) != null) {
             if (is_array($patterns)) {
                 foreach ($patterns as $label => $pattern) {
                     Route::pattern($label, $pattern);
@@ -58,11 +68,11 @@ class RouteServiceProvider extends ServiceProvider
                     require __DIR__ . '/../routes/admin.php';
                 });
 
-                $router->group(['middleware' => ['noDebugBar']], function ($router) {
+                $router->group([], function ($router) {
                     require __DIR__ . '/../routes/auth.php';
                 });
 
-                $router->group(['middleware' => array_merge(['noDebugBar'], (app()->environment('production') ? ['twill_auth:twill_users'] : []))], function ($router) {
+                $router->group(['middleware' => $this->app->environment('production') ? ['twill_auth:twill_users'] : []], function ($router) {
                     require __DIR__ . '/../routes/templates.php';
                 });
             }
@@ -75,28 +85,37 @@ class RouteServiceProvider extends ServiceProvider
                 'middleware' => [config('twill.admin_middleware_group', 'web')],
             ],
                 function ($router) {
-                    $router->group(['middleware' => array_merge(['noDebugBar'], (app()->environment('production') ? ['twill_auth:twill_users'] : []))], function ($router) {
+                    $router->group(['middleware' => $this->app->environment('production') ? ['twill_auth:twill_users'] : []], function ($router) {
                         require __DIR__ . '/../routes/templates.php';
                     });
                 }
             );
         }
+
+        if (config('twill.media_library.image_service') === 'A17\Twill\Services\MediaLibrary\Glide') {
+            $router->get('/' . config('twill.glide.base_path') . '/{path}', GlideController::class)->where('path', '.*');
+        }
     }
 
-    private function registerRouteMiddlewares()
+    /**
+     * Register Route middleware.
+     *
+     * @param Router $router
+     * @return void
+     */
+    private function registerRouteMiddlewares(Router $router)
     {
-        /*
-         * See Laravel 5.4 Changelog https://laravel.com/docs/5.4/upgrade
-         * The middleware method of the Illuminate\Routing\Router class has been renamed to aliasMiddleware().
-         */
-        $middlewareRegisterMethod = method_exists(app('router'), 'aliasMiddleware') ? 'aliasMiddleware' : 'middleware';
-        Route::$middlewareRegisterMethod('noDebugBar', NoDebugBar::class);
-        Route::$middlewareRegisterMethod('impersonate', Impersonate::class);
-        Route::$middlewareRegisterMethod('twill_auth', \Illuminate\Auth\Middleware\Authenticate::class);
-        Route::$middlewareRegisterMethod('twill_guest', RedirectIfAuthenticated::class);
-        Route::$middlewareRegisterMethod('validateBackHistory', ValidateBackHistory::class);
+        Route::aliasMiddleware('impersonate', Impersonate::class);
+        Route::aliasMiddleware('twill_auth', \Illuminate\Auth\Middleware\Authenticate::class);
+        Route::aliasMiddleware('twill_guest', RedirectIfAuthenticated::class);
+        Route::aliasMiddleware('validateBackHistory', ValidateBackHistory::class);
     }
 
+    /**
+     * Registers Route macros.
+     *
+     * @return void
+     */
     protected function registerMacros()
     {
         Route::macro('moduleShowWithPreview', function ($moduleName, $routePrefix = null, $controllerName = null) {
@@ -105,11 +124,11 @@ class RouteServiceProvider extends ServiceProvider
             }
 
             if ($controllerName === null) {
-                $controllerName = ucfirst(str_plural($moduleName));
+                $controllerName = ucfirst(Str::plural($moduleName));
             }
 
-            $routePrefix = empty($routePrefix) ? '/' : (starts_with($routePrefix, '/') ? $routePrefix : '/' . $routePrefix);
-            $routePrefix = ends_with($routePrefix, '/') ? $routePrefix : $routePrefix . '/';
+            $routePrefix = empty($routePrefix) ? '/' : (Str::startsWith($routePrefix, '/') ? $routePrefix : '/' . $routePrefix);
+            $routePrefix = Str::endsWith($routePrefix, '/') ? $routePrefix : $routePrefix . '/';
 
             Route::name($moduleName . '.show')->get($routePrefix . '{slug}', $controllerName . 'Controller@show');
             Route::name($moduleName . '.preview')->get('/admin-preview' . $routePrefix . '{slug}', $controllerName . 'Controller@show')->middleware(['web', 'twill_auth:twill_users', 'can:list']);
@@ -121,10 +140,10 @@ class RouteServiceProvider extends ServiceProvider
             $prefixSlug = str_replace('.', "/", $slug);
             $_slug = Arr::last($slugs);
             $className = implode("", array_map(function ($s) {
-                return ucfirst(str_singular($s));
+                return ucfirst(Str::singular($s));
             }, $slugs));
 
-            $customRoutes = $defaults = ['reorder', 'publish', 'bulkPublish', 'browser', 'feature', 'bulkFeature', 'tags', 'preview', 'restore', 'bulkRestore', 'bulkDelete', 'restoreRevision'];
+            $customRoutes = $defaults = ['reorder', 'publish', 'bulkPublish', 'browser', 'feature', 'bulkFeature', 'tags', 'preview', 'restore', 'bulkRestore', 'forceDelete', 'bulkForceDelete', 'bulkDelete', 'restoreRevision'];
 
             if (isset($options['only'])) {
                 $customRoutes = array_intersect($defaults, (array) $options['only']);
@@ -152,7 +171,7 @@ class RouteServiceProvider extends ServiceProvider
                     Route::get($routeSlug . "/{id}", $mapping);
                 }
 
-                if (in_array($route, ['publish', 'feature', 'restore'])) {
+                if (in_array($route, ['publish', 'feature', 'restore', 'forceDelete'])) {
                     Route::put($routeSlug, $mapping);
                 }
 
@@ -160,7 +179,7 @@ class RouteServiceProvider extends ServiceProvider
                     Route::put($routeSlug . "/{id}", $mapping);
                 }
 
-                if (in_array($route, ['reorder', 'bulkPublish', 'bulkFeature', 'bulkDelete', 'bulkRestore'])) {
+                if (in_array($route, ['reorder', 'bulkPublish', 'bulkFeature', 'bulkDelete', 'bulkRestore', 'bulkForceDelete'])) {
                     Route::post($routeSlug, $mapping);
                 }
             }

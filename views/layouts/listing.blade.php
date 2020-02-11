@@ -32,7 +32,7 @@
                                     'label' => $label
                                 ];
                             })->values()->toArray() : ${$filter.'List'}) }}"
-                            placeholder="All {{ strtolower(str_plural($filter)) }}"
+                            placeholder="All {{ strtolower(\Illuminate\Support\Str::plural($filter)) }}"
                             ref="filterDropdown[{{ $loop->index }}]"
                             ></a17-vselect>
                         @endif
@@ -51,6 +51,15 @@
                     @if($create)
                         <div slot="additional-actions">
                             <a17-button variant="validate" size="small" v-on:click="create">Add new</a17-button>
+                            @foreach($filterLinks as $link)
+                                <a17-button el="a" href="{{ $link['url'] ?? '#' }}" download="{{ $link['download'] ?? '' }}" rel="{{ $link['rel'] ?? '' }}" target="{{ $link['target'] ?? '' }}" variant="small secondary">{{ $link['label'] }}</a17-button>
+                            @endforeach
+                        </div>
+                    @elseif(isset($filterLinks) && count($filterLinks))
+                        <div slot="additional-actions">
+                            @foreach($filterLinks as $link)
+                                <a17-button el="a" href="{{ $link['url'] ?? '#' }}" download="{{ $link['download'] ?? '' }}" rel="{{ $link['rel'] ?? '' }}" target="{{ $link['target'] ?? '' }}" variant="small secondary">{{ $link['label'] }}</a17-button>
+                            @endforeach
                         </div>
                     @endif
                 </a17-filter>
@@ -92,6 +101,11 @@
             <p class="modal--tiny-title"><strong>Move to trash</strong></p>
             <p>The item won't be deleted but moved to trash.</p>
         </a17-dialog>
+
+        <a17-dialog ref="warningDestroyRow" modal-title="Destroy item" confirm-label="Destroy">
+            <p class="modal--tiny-title"><strong>Destroy permanently</strong></p>
+            <p>The item won't be able to be restored anymore.</p>
+        </a17-dialog>
     </div>
 @stop
 
@@ -102,6 +116,8 @@
         bulkPublish: '{{ $bulkPublishUrl }}',
         restore: '{{ $restoreUrl }}',
         bulkRestore: '{{ $bulkRestoreUrl }}',
+        forceDelete: '{{ $forceDeleteUrl }}',
+        bulkForceDelete: '{{ $bulkForceDeleteUrl }}',
         reorder: '{{ $reorderUrl }}',
         feature: '{{ $featureUrl }}',
         bulkFeature: '{{ $bulkFeatureUrl }}',
