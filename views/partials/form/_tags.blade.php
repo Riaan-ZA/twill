@@ -1,5 +1,5 @@
 <a17-vselect
-    label="Tags"
+	label={{ $label ?? "Tags" }}
     name="tags"
     :multiple="true"
     :searchable="true"
