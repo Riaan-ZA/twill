@@ -7,3 +7,7 @@ assets/dist/*
 frontend/js/components/blocks/customs/*
 .DS_Store
 public/
+tests/coverage
+tests/storage
+.phpunit.result.cache
+.php_cs.cache

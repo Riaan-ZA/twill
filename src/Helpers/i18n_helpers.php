@@ -61,6 +61,10 @@ if (!function_exists('getLanguageLabelFromLocaleCode')) {
      */
     function getLanguageLabelFromLocaleCode($code)
     {
+        if (class_exists(Locale::class)) {
+            return Locale::getDisplayLanguage($code);
+        }
+
         $codeToLanguageMappings = [
             'ab' => 'Abkhazian',
             'aa' => 'Afar',
@@ -228,7 +232,7 @@ if (!function_exists('camelCaseToWords')) {
     {
         $re = '/(?<=[a-z])(?=[A-Z])/x';
         $a = preg_split($re, $camelCaseString);
-        $words = join($a, " ");
+        $words = join(" ", $a);
         return ucfirst(strtolower($words));
     }
 }

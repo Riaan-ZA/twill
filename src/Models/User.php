@@ -4,6 +4,7 @@ namespace A17\Twill\Models;
 
 use A17\Twill\Models\Behaviors\HasMedias;
 use A17\Twill\Models\Behaviors\HasPresenter;
+use A17\Twill\Models\Behaviors\HasOauth;
 use A17\Twill\Models\Enums\UserRole;
 use A17\Twill\Notifications\Reset as ResetNotification;
 use A17\Twill\Notifications\Welcome as WelcomeNotification;
@@ -13,10 +14,11 @@ use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Foundation\Auth\User as AuthenticatableContract;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Session;
+use PragmaRX\Google2FAQRCode\Google2FA;
 
 class User extends AuthenticatableContract
 {
-    use Authenticatable, Authorizable, HasMedias, Notifiable, HasPresenter, SoftDeletes;
+    use Authenticatable, Authorizable, HasMedias, Notifiable, HasPresenter, HasOauth, SoftDeletes;
 
     public $timestamps = true;
 
@@ -48,6 +50,8 @@ class User extends AuthenticatableContract
             ],
         ],
     ];
+
+    protected $casts = ['published' => 'boolean'];
 
     public function __construct(array $attributes = [])
     {
@@ -146,5 +150,36 @@ class User extends AuthenticatableContract
     public function isPublished()
     {
         return (bool) $this->published;
+    }
+
+    public function setGoogle2faSecretAttribute($secret)
+    {
+        $this->attributes['google_2fa_secret'] = filled($secret) ? \Crypt::encrypt($secret) : null;
+    }
+
+    public function getGoogle2faSecretAttribute($secret)
+    {
+        return filled($secret) ? \Crypt::decrypt($secret) : null;
+    }
+
+    public function generate2faSecretKey()
+    {
+        if (is_null($this->google_2fa_secret)) {
+            $secret = (new Google2FA())->generateSecretKey();
+
+            $this->google_2fa_secret = $secret;
+
+            $this->save();
+        }
+    }
+
+    public function get2faQrCode()
+    {
+        return (new Google2FA())->getQRCodeInline(
+            config('app.name'),
+            $this->email,
+            $this->google_2fa_secret,
+            200
+        );
     }
 }

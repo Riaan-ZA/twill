@@ -65,6 +65,8 @@ abstract class ModuleController extends Controller
         'bulkFeature' => false,
         'restore' => true,
         'bulkRestore' => true,
+        'forceDelete' => true,
+        'bulkForceDelete' => true,
         'delete' => true,
         'bulkDelete' => true,
         'reorder' => false,
@@ -109,6 +111,13 @@ abstract class ModuleController extends Controller
      * @var array
      */
     protected $filters = [];
+
+    /**
+     * Additional links to display in the listing filter
+     *
+     * @var array
+     */
+    protected $filterLinks = [];
 
     /**
      * Default orders for the index view.
@@ -231,7 +240,7 @@ abstract class ModuleController extends Controller
         $this->middleware('can:edit', ['only' => ['store', 'edit', 'update']]);
         $this->middleware('can:publish', ['only' => ['publish', 'feature', 'bulkPublish', 'bulkFeature']]);
         $this->middleware('can:reorder', ['only' => ['reorder']]);
-        $this->middleware('can:delete', ['only' => ['destroy', 'bulkDelete', 'restore', 'bulkRestore', 'restoreRevision']]);
+        $this->middleware('can:delete', ['only' => ['destroy', 'bulkDelete', 'restore', 'bulkRestore', 'forceDelete', 'bulkForceDelete', 'restoreRevision']]);
     }
 
     /**
@@ -299,7 +308,7 @@ abstract class ModuleController extends Controller
             $this->moduleName,
             $this->routePrefix,
             'edit',
-            array_filter([$parentModuleId]) + ['id' => $item->id]
+            array_filter([$parentModuleId]) + [Str::singular($this->moduleName) => $item->id]
         ));
     }
 
@@ -329,7 +338,7 @@ abstract class ModuleController extends Controller
 
         if ($this->getIndexOption('editInModal')) {
             return $this->request->ajax()
-            ? Response::json($this->modalFormData($submodule ?? $id))
+            ? Response::json($this->modalFormData($submoduleId ?? $id))
             : Redirect::to(moduleRoute($this->moduleName, $this->routePrefix, 'index'));
         }
 
@@ -364,7 +373,7 @@ abstract class ModuleController extends Controller
                 $this->moduleName,
                 $this->routePrefix,
                 'edit',
-                ['id' => $id]
+                [Str::singular($this->moduleName) => $id]
             ));
         } else {
             $formRequest = $this->validateFormRequest();
@@ -392,7 +401,7 @@ abstract class ModuleController extends Controller
                         $this->moduleName,
                         $this->routePrefix,
                         'edit',
-                        ['id' => $id]
+                        [Str::singular($this->moduleName) => $id]
                     ));
                 }
             }
@@ -528,7 +537,7 @@ abstract class ModuleController extends Controller
      */
     public function destroy($id, $submoduleId = null)
     {
-        $item = $this->repository->getById($id);
+        $item = $this->repository->getById($submoduleId ?? $id);
         if ($this->repository->delete($submoduleId ?? $id)) {
             $this->fireEvent();
             activity()->performedOn($item)->log('deleted');
@@ -549,6 +558,32 @@ abstract class ModuleController extends Controller
         }
 
         return $this->respondWithError($this->modelTitle . ' items were not moved to trash. Something wrong happened!');
+    }
+
+    /**
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function forceDelete()
+    {
+        if ($this->repository->forceDelete($this->request->get('id'))) {
+            $this->fireEvent();
+            return $this->respondWithSuccess($this->modelTitle . ' destroyed!');
+        }
+
+        return $this->respondWithError($this->modelTitle . ' was not destroyed. Something wrong happened!');
+    }
+
+    /**
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function bulkForceDelete()
+    {
+        if ($this->repository->bulkForceDelete(explode(',', $this->request->get('ids')))) {
+            $this->fireEvent();
+            return $this->respondWithSuccess($this->modelTitle . ' items destroyed!');
+        }
+
+        return $this->respondWithError($this->modelTitle . ' items were not destroyed. Something wrong happened!');
     }
 
     /**
@@ -668,6 +703,7 @@ abstract class ModuleController extends Controller
             'tableMainFilters' => $this->getIndexTableMainFilters($items),
             'filters' => json_decode($this->request->get('filter'), true) ?? [],
             'hiddenFilters' => array_keys(Arr::except($this->filters, array_keys($this->defaultFilters))),
+            'filterLinks' => $this->filterLinks ?? [],
             'maxPage' => method_exists($items, 'lastPage') ? $items->lastPage() : 1,
             'defaultMaxPage' => method_exists($items, 'total') ? ceil($items->total() / $this->perPage) : 1,
             'offset' => method_exists($items, 'perPage') ? $items->perPage() : count($items),
@@ -763,7 +799,7 @@ abstract class ModuleController extends Controller
                 'publish_start_date' => $item->publish_start_date,
                 'publish_end_date' => $item->publish_end_date,
                 'edit' => $canEdit ? $this->getModuleRoute($item->id, 'edit') : null,
-                'delete' => ($canEdit && $itemCanDelete) ? $this->getModuleRoute($item->id, 'destroy') : null,
+                'delete' => $itemCanDelete ? $this->getModuleRoute($item->id, 'destroy') : null,
             ] + ($this->getIndexOption('editInModal') ? [
                 'editInModal' => $this->getModuleRoute($item->id, 'edit'),
                 'updateUrl' => $this->getModuleRoute($item->id, 'update'),
@@ -982,6 +1018,8 @@ abstract class ModuleController extends Controller
             'bulkPublish',
             'restore',
             'bulkRestore',
+            'forceDelete',
+            'bulkForceDelete',
             'reorder',
             'feature',
             'bulkFeature',
@@ -1017,6 +1055,8 @@ abstract class ModuleController extends Controller
                 'reorder' => 'reorder',
                 'delete' => 'delete',
                 'restore' => 'delete',
+                'forceDelete' => 'delete',
+                'bulkForceDelete' => 'delete',
                 'bulkPublish' => 'publish',
                 'bulkRestore' => 'delete',
                 'bulkFeature' => 'feature',
@@ -1200,7 +1240,7 @@ abstract class ModuleController extends Controller
             'permalinkPrefix' => $this->getPermalinkPrefix($baseUrl),
             'saveUrl' => $this->getModuleRoute($item->id, 'update'),
             'editor' => $this->moduleHas('revisions') && $this->moduleHas('blocks') && !$this->disableEditor,
-            'blockPreviewUrl' => URL::route('admin.blocks.preview'),
+            'blockPreviewUrl' => Route::has('admin.blocks.preview')? URL::route('admin.blocks.preview') : '#',
             'revisions' => $this->moduleHas('revisions') ? $item->revisionsArray() : null,
         ] + (Route::has($previewRouteName) ? [
             'previewUrl' => moduleRoute($this->moduleName, $this->routePrefix, 'preview', $item->id),
@@ -1442,7 +1482,7 @@ abstract class ModuleController extends Controller
             $this->moduleName,
             $this->routePrefix,
             'edit',
-            array_filter($params) + ['id' => $id]
+            array_filter($params) + [Str::singular($this->moduleName) => $id]
         ));
     }
 
