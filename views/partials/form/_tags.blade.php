@@ -1,6 +1,15 @@
+@php
+    $label = $label ?? 'Tags';
+    $note = $note ?? false;
+@endphp
 <a17-vselect
+<<<<<<< HEAD
 	label={{ $label ?? "Tags" }}
+=======
+    label="{{ $label }}"
+>>>>>>> upstream/2.x
     name="tags"
+    @if ($note) note="{{ $note }}" @endif
     :multiple="true"
     :searchable="true"
     :taggable="true"
