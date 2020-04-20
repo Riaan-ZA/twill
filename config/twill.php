@@ -25,6 +25,48 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Admin subdomain routing support
+    |--------------------------------------------------------------------------
+    |
+    | Enabling this allows adding top level keys to Twill's navigation and
+    | dashboard modules configuration, mapping to a subdomain.
+    | This is a very simple way to implement multi-tenant CMS/sites in Twill.
+    | A navigation array looking like the following would expose your CMS on
+    | the 'admin.subdomain1.app-url.test' and 'admin.subdomain2.app-url.test'
+    | urls, with its corresponding links.
+    | [
+    |   'subdomain1' => [
+    |     'module1' => [...],
+    |     ...
+    |   ],
+    |   'subdomain2' => [
+    |     'module2' => [...]
+    |     ...
+    |   ]
+    | ]
+    |
+    | App name can be set per subdomain using the 'twill.app_names'
+    | configuration array. For our example above:
+    | [
+    |   'app_names' => [
+    |     'subdomain1' => 'App 1 name',
+    |     'subdomain2' => 'App 2 name',
+    |   ],
+    | ]
+    |
+    | Subdomain configuration nesting also applies to the dashboard
+    | 'modules' key.
+    |
+    | You can provide a custom 'block_single_layout' per subdomain by
+    | creating a Blade file under resources/views/subdomain/layouts/blocks.
+    |
+     */
+    'support_subdomain_admin_routing' => false,
+    'admin_app_subdomain' => 'admin',
+    'active_subdomain' => null,
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Admin Route and domain pattern
     |--------------------------------------------------------------------------
     |
@@ -49,7 +91,7 @@ return [
     | Twill default tables naming configuration
     |--------------------------------------------------------------------------
     |
-    | TODO: In Twill 2.0, all tables will be prefixed by `twill_`.
+    | TODO: In Twill 3.0, all tables will be prefixed by `twill_`.
     |
      */
     'users_table' => 'twill_users',
@@ -95,4 +137,28 @@ return [
     'templates_on_frontend_domain' => false,
 
     'google_maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Twill FE Application configurqtion
+    |--------------------------------------------------------------------------
+    |
+     */
+    'js_namespace' => 'TWILL',
+    'dev_mode' => false,
+    'dev_mode_url' => env('TWILL_DEV_MODE_URL', 'http://localhost:8080'),
+    'public_directory' => env('TWILL_ASSETS_DIR', 'assets/admin'),
+    'manifest_file' => 'twill-manifest.json',
+    'vendor_path' => 'vendor/area17/twill',
+    'custom_components_resource_path' => 'assets/js/components',
+    'build_timeout' => 300,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Twill app locale
+    |--------------------------------------------------------------------------
+    |
+     */
+    'locale' => 'en',
+    'fallback_locale' => 'en',
 ];
